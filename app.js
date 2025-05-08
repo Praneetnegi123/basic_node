@@ -9,7 +9,7 @@ const PORT=4008
 
 // Get request
 app.get('/getRequests', (req, res) => {
-    res.send('All Products Here');
+    res.send('All Products Here (examples how to use CICD pipeline using gihub action and ec2 instance)');
 }
 );
 
