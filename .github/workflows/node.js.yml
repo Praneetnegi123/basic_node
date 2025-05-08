@@ -6,8 +6,6 @@ name: Node.js CI
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
   build:
@@ -31,11 +29,13 @@ jobs:
 
     - name: Build Docker image
       run: sudo docker build -t node_basic .
-    
-    - name: Stop and remove old container
+    - name: Stop and remove old container (if exists)
       run: |
-        sudo docker stop node_basic || true
-        sudo docker rm node_basic || true
+        if sudo docker ps -a --format '{{.Names}}' | grep -Eq "^node_basic$"; then
+        echo "Stopping existing container..."
+        sudo docker stop node_basic
+        sudo docker rm node_basic
+        fi
 
     - name: Run new container
       run: sudo docker run -d --name node_basic -p 4008:4008 node_basic:latest
