@@ -5,37 +5,43 @@ name: Node.js CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
-
     runs-on: self-hosted
 
     strategy:
       matrix:
-        node-version: [ 20.x]
+        node-version: [20.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build --if-present
 
-    - name: Build Docker image
-      run: sudo docker build -t node_basic .
-    - name: Stop and remove old container (if exists)
-      run: |
-        if sudo docker ps -a --format '{{.Names}}' | grep -Eq "^node_basic$"; then
-        echo "Stopping existing container..."
-        sudo docker stop node_basic
-        sudo docker rm node_basic
-        fi
+      - name: Build Docker image
+        run: sudo docker build -t node_basic .
+      - name: Free port 4008 (stop any container using it)
+        run: |
+          CONTAINER_ID=$(sudo lsof -i :4008 -t || true)
+          if [ -n "$CONTAINER_ID" ]; then
+          echo "Port 4008 is in use by PID $CONTAINER_ID. Stopping associated container..."
+          DOCKER_ID=$(sudo docker ps -q --filter "publish=4008")
+          if [ -n "$DOCKER_ID" ]; then
+            sudo docker stop $DOCKER_ID
+            sudo docker rm $DOCKER_ID
+          else
+            echo "No docker container found using port 4008, but a process is. Killing process..."
+            sudo kill -9 $CONTAINER_ID
+            fi
+          fi
 
-    - name: Run new container
-      run: sudo docker run -d --name node_basic -p 4008:4008 node_basic:latest
+      - name: Run new container
+        run: sudo docker run -d --name node_basic -p 4008:4008 node_basic:latest
